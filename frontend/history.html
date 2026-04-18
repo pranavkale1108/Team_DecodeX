@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CodeAtlas - History</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="history-body">
+    <header class="navbar">
+        <div class="logo">
+            <div class="logo-icon">
+                <i class="fa-solid fa-compass"></i>
+            </div>
+            <span>CodeAtlas</span>
+        </div>
+        <nav class="nav-links">
+            <a href="index.html">Home</a>
+            <a href="dashboard.html">Dashboard</a>
+            <a href="#" class="active">History</a>
+        </nav>
+        <div class="auth-buttons">
+            <button class="btn-signin"><i class="fa-solid fa-code-branch"></i> Sign In</button>
+        </div>
+    </header>
+
+    <main class="history-main">
+        <div class="history-header">
+            <div class="history-badge">
+                <i class="fa-regular fa-clock"></i> Recent analyses
+            </div>
+            <h1 class="history-title">
+                Analysis <span class="gradient-text">history</span>
+            </h1>
+            <p class="history-subtitle">
+                Every repository you analyze is saved here so you can re-open its architecture graph and AI insights anytime.
+            </p>
+            
+            <div class="history-controls">
+                <div class="history-search">
+                    <input type="text" placeholder="Search history..." class="history-search-input">
+                </div>
+                <button class="btn-analyze-new">Analyze new repo <i class="fa-solid fa-arrow-right"></i></button>
+                <button class="btn-clear"><i class="fa-regular fa-trash-can"></i> Clear all</button>
+            </div>
+        </div>
+
+        <div class="history-list">
+            <div class="history-item">
+                <div class="history-icon">
+                    <i class="fa-solid fa-code-branch"></i>
+                </div>
+                <div class="history-details">
+                    <div class="history-repo-name">Krishna-1416/Ignition-Hackverse-DecodeX-</div>
+                    <div class="history-meta">
+                        <i class="fa-regular fa-clock"></i> 23 minutes ago &nbsp;&nbsp; github.com/Krishna-1416/Ignition-Hackverse-DecodeX-
+                    </div>
+                </div>
+                <div class="history-actions">
+                    <button class="btn-reopen">Re-open <i class="fa-solid fa-arrow-right"></i></button>
+                    <button class="btn-delete"><i class="fa-regular fa-trash-can"></i></button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>&copy; 2026 CodeAtlas — Built for developers.</p>
+        </div>
+    </main>
+</body>
+</html>
