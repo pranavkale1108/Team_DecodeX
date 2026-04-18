@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CodeAtlas - Understand any codebase in seconds</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <header class="navbar">
+        <div class="logo">
+            <div class="logo-icon">
+                <i class="fa-solid fa-compass"></i>
+            </div>
+            <span>CodeAtlas</span>
+        </div>
+        <nav class="nav-links">
+            <a href="#" class="active">Home</a>
+            <a href="#">Dashboard</a>
+            <a href="#">History</a>
+        </nav>
+        <div class="auth-buttons">
+            <button class="btn-signin"><i class="fa-solid fa-code-branch"></i> Sign In</button>
+        </div>
+    </header>
+
+    <main class="hero-section">
+        <div class="badge">
+            <span class="dot"></span> AI-powered repository navigator
+        </div>
+        <h1 class="hero-title">
+            Understand any codebase<br>
+            <span class="gradient-text">in seconds.</span>
+        </h1>
+        <p class="hero-subtitle">
+            Visualize, explore, and analyze GitHub repositories with AI. CodeAtlas turns any repo<br>
+            into an interactive architecture map.
+        </p>
+
+        <div class="search-container">
+            <div class="search-input-wrapper">
+                <i class="fa-solid fa-code-branch search-icon"></i>
+                <input type="text" placeholder="https://github.com/owner/repository" class="search-input">
+                <button class="btn-analyze" onclick="const repo = document.querySelector('.search-input').value || 'facebook/react'; window.location.href = 'dashboard.html?repo=' + encodeURIComponent(repo);">Analyze Repo <i class="fa-solid fa-arrow-right"></i></button>
+            </div>
+        </div>
+
+        <div class="try-section">
+            <span class="try-text">Try:</span>
+            <button class="try-badge">facebook/react</button>
+            <button class="try-badge">vercel/next.js</button>
+            <button class="try-badge">tanstack/router</button>
+        </div>
+
+        <div class="features-grid">
+            <div class="feature-card">
+                <div class="feature-icon"><i class="fa-solid fa-diagram-project"></i></div>
+                <h3>Interactive graph</h3>
+                <p>See files, modules, and dependencies as a living map you can pan, zoom, and explore.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon"><i class="fa-solid fa-wand-magic-sparkles"></i></div>
+                <h3>AI insights</h3>
+                <p>Get plain-English summaries for every file and answer questions about the codebase.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon"><i class="fa-solid fa-book-open"></i></div>
+                <h3>Onboarding path</h3>
+                <p>Follow a curated reading order so newcomers ramp up in hours, not weeks.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon"><i class="fa-solid fa-bolt"></i></div>
+                <h3>Lightning fast</h3>
+                <p>Analyze repositories of any size with incremental, on-demand exploration.</p>
+            </div>
+        </div>
+    </main>
+</body>
+</html>
