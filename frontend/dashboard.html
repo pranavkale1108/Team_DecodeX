@@ -143,9 +143,9 @@
                 
                 <!-- Zoom Controls -->
                 <div class="zoom-controls">
-                    <button><i class="fa-solid fa-plus"></i></button>
-                    <button><i class="fa-solid fa-minus"></i></button>
-                    <button><i class="fa-solid fa-expand"></i></button>
+                    <button id="zoom-in-btn"><i class="fa-solid fa-plus"></i></button>
+                    <button id="zoom-out-btn"><i class="fa-solid fa-minus"></i></button>
+                    <button id="zoom-fit-btn"><i class="fa-solid fa-expand"></i></button>
                 </div>
                 
                 <!-- Filter Bar -->
@@ -526,6 +526,41 @@
                 }
             });
         }
+
+        // Zoom Logic
+        let currentZoom = 1;
+        const graphContainer = document.querySelector('.graph-container');
+        
+        // Ensure smooth zooming
+        graphContainer.style.transition = 'transform 0.3s ease-out';
+        graphContainer.style.transformOrigin = 'center top'; // Scales from the top center for a nice effect
+
+        document.getElementById('zoom-in-btn').addEventListener('click', () => {
+            currentZoom = Math.min(currentZoom + 0.15, 2.5);
+            graphContainer.style.transform = `scale(${currentZoom})`;
+        });
+
+        document.getElementById('zoom-out-btn').addEventListener('click', () => {
+            currentZoom = Math.max(currentZoom - 0.15, 0.4);
+            graphContainer.style.transform = `scale(${currentZoom})`;
+        });
+
+        document.getElementById('zoom-fit-btn').addEventListener('click', () => {
+            const mapArea = document.querySelector('.map-area');
+            if (!document.fullscreenElement) {
+                if (mapArea.requestFullscreen) {
+                    mapArea.requestFullscreen().catch(err => console.log(err));
+                }
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                }
+            }
+            
+            // Also reset zoom on click
+            currentZoom = 1;
+            graphContainer.style.transform = `scale(${currentZoom})`;
+        });
     </script>
 </body>
 </html>
