@@ -9,6 +9,16 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body class="dashboard-body">
+    <!-- Error Modal for direct access -->
+    <div id="repo-error-modal" class="repo-error-modal" style="display: none;">
+        <div class="repo-error-content">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+            <h2>No Repository Provided</h2>
+            <p>Please enter a GitHub repository first to view its architecture map.</p>
+            <a href="index.html" class="btn-analyze" style="text-decoration: none; display: inline-block; margin-top: 15px;">Go back to Home</a>
+        </div>
+    </div>
+
     <!-- Navbar -->
     <header class="navbar dashboard-navbar">
         <div class="logo">
@@ -526,6 +536,22 @@
                 }
             });
         }
+
+        // --- URL Checking Logic ---
+        document.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const repoParam = urlParams.get('repo');
+            
+            if (!repoParam) {
+                // Show error modal if no repo is provided
+                document.getElementById('repo-error-modal').style.display = 'flex';
+                // Hide main content to prevent interacting underneath
+                document.querySelector('.dashboard-layout').style.display = 'none';
+            } else {
+                // Display the repository name in the active navbar UI
+                document.getElementById('display-repo-name').textContent = decodeURIComponent(repoParam);
+            }
+        });
 
         // Zoom Logic
         let currentZoom = 1;
