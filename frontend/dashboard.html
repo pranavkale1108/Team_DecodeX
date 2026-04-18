@@ -171,118 +171,16 @@
                 </div>
 
                 <!-- Graph -->
-                <div class="graph-container">
-                    <svg class="graph-lines" width="100%" height="100%">
+                <div class="graph-container" id="graph-root">
+                    <svg class="graph-lines" id="graph-svg" width="100%" height="100%">
                         <defs>
                             <marker id="arrow-active" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
                                 <path d="M 0 0 L 10 5 L 0 10 z" fill="#00f2fe" />
                             </marker>
                         </defs>
-                        <!-- Lines connecting nodes -->
-                        <path class="edge" data-source="main" data-target="App" d="M400,30 C400,60 320,60 320,80" stroke="#334155" stroke-width="2" fill="none" />
-                        <path class="edge" data-source="main" data-target="router" d="M400,30 C400,60 520,60 520,80" stroke="#334155" stroke-width="2" fill="none" />
-                        
-                        <path class="edge" data-source="App" data-target="Home" d="M320,130 C320,160 160,160 160,180" stroke="#334155" stroke-width="2" fill="none" />
-                        <path class="edge" data-source="App" data-target="Login" d="M320,130 C320,160 320,160 320,180" stroke="#334155" stroke-width="2" fill="none" />
-                        <path class="edge" data-source="App" data-target="Dashboard" d="M320,130 C320,160 520,160 520,180" stroke="#334155" stroke-width="2" fill="none" />
-                        
-                        <path class="edge" data-source="router" data-target="Dashboard" d="M520,130 C520,160 520,160 520,180" stroke="#334155" stroke-width="2" fill="none" />
-                        <path class="edge" data-source="router" data-target="auth" d="M520,130 C520,160 680,160 680,180" stroke="#334155" stroke-width="2" fill="none" />
-                        
-                        <path class="edge" data-source="Home" data-target="users" d="M160,230 C160,270 240,270 240,310" stroke="#334155" stroke-width="2" fill="none" />
-                        <path class="edge" data-source="Login" data-target="users" d="M320,230 C320,270 240,270 240,310" stroke="#334155" stroke-width="2" fill="none" />
-                        <path class="edge" data-source="Login" data-target="api" d="M320,230 C320,270 400,270 400,310" stroke="#334155" stroke-width="2" fill="none" />
-                        <path class="edge" data-source="Dashboard" data-target="api" d="M520,230 C520,270 400,270 400,310" stroke="#334155" stroke-width="2" fill="none" />
-                        <path class="edge" data-source="Dashboard" data-target="Button" d="M520,230 C520,270 560,270 560,310" stroke="#334155" stroke-width="2" fill="none" />
+                        <!-- Lines connecting nodes will be injected here -->
                     </svg>
-
-                    <!-- Top level -->
-                    <div class="node node-entry" data-id="main" style="left: 320px; top: -10px;">
-                        <div class="node-icon" style="background:rgba(202, 138, 4, 0.1); color:#fde047;"><i class="fa-solid fa-play"></i></div>
-                        <div class="node-text">
-                            <div class="node-title">main.tsx</div>
-                            <div class="node-type" style="color:#ca8a04;">ENTRY</div>
-                        </div>
-                        <div class="node-dot"></div>
-                    </div>
-
-                    <!-- Second Row -->
-                    <div class="node node-comp" data-id="App" style="left: 240px; top: 80px;">
-                        <div class="node-icon"><i class="fa-solid fa-cubes"></i></div>
-                        <div class="node-text">
-                            <div class="node-title">App.tsx</div>
-                            <div class="node-type">COMPONENT</div>
-                        </div>
-                        <div class="node-dot"></div>
-                    </div>
-                    <div class="node node-config" data-id="router" style="left: 440px; top: 80px;">
-                        <div class="node-icon"><i class="fa-solid fa-gear"></i></div>
-                        <div class="node-text">
-                            <div class="node-title">router.tsx</div>
-                            <div class="node-type">CONFIG</div>
-                        </div>
-                        <div class="node-dot"></div>
-                    </div>
-
-                    <!-- Third Row -->
-                    <div class="node node-route" data-id="Home" style="left: 80px; top: 180px;">
-                        <div class="node-icon"><i class="fa-solid fa-layer-group"></i></div>
-                        <div class="node-text">
-                            <div class="node-title">Home.tsx</div>
-                            <div class="node-type">ROUTE</div>
-                        </div>
-                        <div class="node-dot"></div>
-                    </div>
-                    <div class="node node-route" data-id="Login" style="left: 240px; top: 180px;">
-                        <div class="node-icon"><i class="fa-solid fa-layer-group"></i></div>
-                        <div class="node-text">
-                            <div class="node-title">Login.tsx</div>
-                            <div class="node-type">ROUTE</div>
-                        </div>
-                        <div class="node-dot"></div>
-                    </div>
-                    <div class="node node-route" data-id="Dashboard" style="left: 440px; top: 180px;">
-                        <div class="node-icon"><i class="fa-solid fa-layer-group"></i></div>
-                        <div class="node-text">
-                            <div class="node-title">Dashboard.tsx</div>
-                            <div class="node-type">ROUTE</div>
-                        </div>
-                        <div class="node-dot"></div>
-                    </div>
-                    <div class="node node-auth" data-id="auth" style="left: 600px; top: 180px;">
-                        <div class="node-icon"><i class="fa-solid fa-shield-halved"></i></div>
-                        <div class="node-text">
-                            <div class="node-title">auth.ts</div>
-                            <div class="node-type">AUTH</div>
-                        </div>
-                        <div class="node-dot"></div>
-                    </div>
-
-                    <!-- Fourth Row -->
-                    <div class="node node-lib" data-id="users" style="left: 160px; top: 310px;">
-                        <div class="node-icon"><i class="fa-solid fa-book"></i></div>
-                        <div class="node-text">
-                            <div class="node-title">users.ts</div>
-                            <div class="node-type">LIBRARY</div>
-                        </div>
-                        <div class="node-dot"></div>
-                    </div>
-                    <div class="node node-api" data-id="api" style="left: 320px; top: 310px;">
-                        <div class="node-icon"><i class="fa-solid fa-network-wired"></i></div>
-                        <div class="node-text">
-                            <div class="node-title">api.ts</div>
-                            <div class="node-type">API</div>
-                        </div>
-                        <div class="node-dot"></div>
-                    </div>
-                    <div class="node node-comp" data-id="Button" style="left: 480px; top: 310px;">
-                        <div class="node-icon"><i class="fa-solid fa-cubes"></i></div>
-                        <div class="node-text">
-                            <div class="node-title">Button.tsx</div>
-                            <div class="node-type">COMPONENT</div>
-                        </div>
-                        <div class="node-dot"></div>
-                    </div>
+                    <!-- Nodes will be injected here -->
                 </div>
             </div>
 
@@ -299,20 +197,7 @@
                         </div>
                     </div>
                     <div class="timeline">
-                        <div class="timeline-item">
-                            <div class="step-num">1</div>
-                            <div class="step-content">
-                                <h4>Start here <span class="code-ref">main.tsx</span></h4>
-                                <p>Application entry point</p>
-                            </div>
-                        </div>
-                        <div class="timeline-item">
-                            <div class="step-num">2</div>
-                            <div class="step-content">
-                                <h4>Root layout <span class="code-ref">App.tsx</span></h4>
-                                <p>Understand global providers</p>
-                            </div>
-                        </div>
+                        <!-- timeline items injected here -->
                     </div>
                 </div>
             </div>
@@ -362,228 +247,298 @@
 
     <!-- Script to handle interactions -->
     <script>
-        // Set repo name from URL
+        const API_BASE = "http://localhost:8000/api";
         const urlParams = new URLSearchParams(window.location.search);
         const repoUrl = urlParams.get('repo');
-        if (repoUrl) {
-            try {
-                let display = repoUrl.replace('https://github.com/', '');
-                if (display.endsWith('/')) display = display.slice(0, -1);
-                const parts = display.split('/');
-                if (parts.length >= 2) {
-                    document.getElementById('display-repo-name').innerText = parts[0] + '/' + parts[1];
-                } else if (display) {
-                    document.getElementById('display-repo-name').innerText = display;
-                }
-            } catch (e) {
-                console.error(e);
+        
+        let repoData = null;
+
+        // UI Elements
+        const loadingOverlay = document.createElement('div');
+        loadingOverlay.className = 'loading-overlay';
+        loadingOverlay.innerHTML = '<div class="spinner"></div><p>Analyzing Repository with AI...</p>';
+        document.body.appendChild(loadingOverlay);
+
+        async function initDashboard() {
+            if (!repoUrl) {
+                document.getElementById('repo-error-modal').style.display = 'flex';
+                document.querySelector('.dashboard-layout').style.display = 'none';
+                loadingOverlay.style.display = 'none';
+                return;
             }
-        }
 
-        // Interaction Logic
-        const nodeDB = {
-            'main': { type: 'ENTRY', color: '#fde047', name: 'main.tsx', path: 'src/main.tsx', summary: 'Entry point of the application. Renders the root App component.', deps: ['App.tsx', 'router.tsx'], usedBy: [], importance: 100 },
-            'App': { type: 'COMPONENT', color: '#38bdf8', name: 'App.tsx', path: 'src/App.tsx', summary: 'Main application component and layout wrapper. Applies themes and providers.', deps: ['Home.tsx', 'Login.tsx', 'Dashboard.tsx'], usedBy: ['main.tsx'], importance: 95 },
-            'router': { type: 'CONFIG', color: '#94a3b8', name: 'router.tsx', path: 'src/router.tsx', summary: 'Defines the global application routes and nested paths.', deps: ['Dashboard.tsx', 'auth.ts'], usedBy: ['main.tsx'], importance: 85 },
-            'Home': { type: 'ROUTE', color: '#22d3ee', name: 'Home.tsx', path: 'src/pages/Home.tsx', summary: 'Public landing page route component.', deps: ['users.ts'], usedBy: ['App.tsx'], importance: 60 },
-            'Login': { type: 'ROUTE', color: '#22d3ee', name: 'Login.tsx', path: 'src/pages/Login.tsx', summary: 'Authentication page handling credential inputs and OAuth.', deps: ['users.ts', 'api.ts'], usedBy: ['App.tsx'], importance: 75 },
-            'Dashboard': { type: 'ROUTE', color: '#22d3ee', name: 'Dashboard.tsx', path: 'src/pages/Dashboard.tsx', summary: 'Main user dashboard displaying analytics and tools.', deps: ['api.ts', 'Button.tsx'], usedBy: ['App.tsx', 'router.tsx'], importance: 85 },
-            'auth': { type: 'AUTH', color: '#fb7185', name: 'auth.ts', path: 'src/lib/auth.ts', summary: 'Session, JWT validation, login/logout flows. Central authentication layer used by API calls.', deps: ['api.ts'], usedBy: ['App.tsx', 'Login.tsx', 'Dashboard.tsx'], importance: 90 },
-            'users': { type: 'LIBRARY', color: '#4ade80', name: 'users.ts', path: 'src/lib/users.ts', summary: 'Utility library for user transformations and states.', deps: [], usedBy: ['Home.tsx', 'Login.tsx'], importance: 40 },
-            'api': { type: 'API', color: '#c084fc', name: 'api.ts', path: 'src/lib/api.ts', summary: 'Axios instance wrapper with request/response interceptors.', deps: [], usedBy: ['Login.tsx', 'Dashboard.tsx', 'auth.ts'], importance: 80 },
-            'Button': { type: 'COMPONENT', color: '#38bdf8', name: 'Button.tsx', path: 'src/components/Button.tsx', summary: 'Reusable standardized UI button component.', deps: [], usedBy: ['Dashboard.tsx'], importance: 30 }
-        };
-
-        const nodes = document.querySelectorAll('.node');
-        const edges = document.querySelectorAll('.edge');
-        const tags = document.querySelectorAll('.tag');
-        const fileItems = document.querySelectorAll('.file-item');
-        const filterNoneBtn = document.querySelector('.filter-none');
-        let activeFilter = null;
-
-        nodes.forEach(node => {
-            node.addEventListener('click', (e) => {
-                e.stopPropagation(); // Prevent map click
-                
-                if (node.classList.contains('active-node')) {
-                    clearNodeSelection();
-                    return;
-                }
-                
-                clearNodeSelection();
-                
-                const nodeId = node.getAttribute('data-id');
-                node.classList.add('active-node');
-                
-                edges.forEach(edge => {
-                    if (edge.getAttribute('data-source') === nodeId || edge.getAttribute('data-target') === nodeId) {
-                        edge.classList.add('active-edge');
-                    }
+            try {
+                const response = await fetch(`${API_BASE}/analyze-repo`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ repo_url: repoUrl })
                 });
 
-                // Sync sidebar
-                const matchingFileItem = document.querySelector(`.file-item[data-id="${nodeId}"]`);
-                if(matchingFileItem) {
-                    matchingFileItem.classList.add('active-file');
+                const result = await response.json();
+                if (result.status === "success") {
+                    repoData = result.data;
+                    renderDashboard(repoData);
+                } else {
+                    alert("Analysis failed: " + result.detail);
                 }
+            } catch (error) {
+                console.error("Error connecting to backend:", error);
+                alert("Could not connect to backend server. Make sure uvicorn is running.");
+            } finally {
+                loadingOverlay.style.display = 'none';
+            }
+        }
 
-                showNodeDetails(nodeId);
+        function renderDashboard(data) {
+            // Update Repo Name
+            document.getElementById('display-repo-name').innerText = data.repo_name;
+
+            // Render Sidebar Files
+            const fileList = document.querySelector('.file-list');
+            fileList.innerHTML = '';
+            data.files.forEach(file => {
+                const item = document.createElement('div');
+                item.className = 'file-item';
+                item.setAttribute('data-id', file.name); // Needed for sync highlighting
+                item.innerHTML = `
+                    <div class="file-icon"><i class="fa-regular fa-file-code"></i></div>
+                    <div class="file-details">
+                        <div class="file-name">${file.name.split('/').pop()}</div>
+                        <div class="file-path">${file.name}</div>
+                    </div>
+                `;
+                item.onclick = () => showFileDetails(file);
+                fileList.appendChild(item);
             });
-        });
 
-        fileItems.forEach(item => {
-            item.addEventListener('click', (e) => {
-                e.stopPropagation();
-                if(item.classList.contains('active-file')) {
-                    clearNodeSelection();
-                    return;
-                }
+            // Render Onboarding Path
+            const timeline = document.querySelector('.timeline');
+            timeline.innerHTML = '';
+            data.onboarding_path.slice(0, 3).forEach((path, index) => {
+                const item = document.createElement('div');
+                item.className = 'timeline-item';
+                item.innerHTML = `
+                    <div class="step-num">${index + 1}</div>
+                    <div class="step-content">
+                        <h4>${index === 0 ? 'Start here' : 'Next'} <span class="code-ref">${path.split('/').pop()}</span></h4>
+                        <p>${path}</p>
+                    </div>
+                `;
+                item.onclick = () => {
+                   const fileObj = data.files.find(f => f.name === path);
+                   if(fileObj) showFileDetails(fileObj);
+                };
+                timeline.appendChild(item);
+            });
 
-                clearNodeSelection();
-                item.classList.add('active-file');
+            // --- Dynamic Graph Rendering (Hierarchical Tree Syntax) ---
+            const graphRoot = document.getElementById('graph-root');
+            const graphSvg = document.getElementById('graph-svg');
+            
+            // Clear existing
+            const existingNodes = graphRoot.querySelectorAll('.node');
+            existingNodes.forEach(n => n.remove());
+            const existingEdges = graphSvg.querySelectorAll('.edge');
+            existingEdges.forEach(e => e.remove());
 
-                const fileId = item.getAttribute('data-id');
-                const targetNode = document.querySelector(`.node[data-id="${fileId}"]`);
-                if(targetNode) {
-                    targetNode.classList.add('active-node');
-                    
-                    edges.forEach(edge => {
-                        if (edge.getAttribute('data-source') === fileId || edge.getAttribute('data-target') === fileId) {
-                            edge.classList.add('active-edge');
+            // 1. Calculate Tree Depth (Levels)
+            const levels = {};
+            const adj = {};
+            
+            data.graph.nodes.forEach(n => {
+                adj[n.id] = [];
+                levels[n.id] = 0;
+            });
+            
+            data.graph.edges.forEach(e => {
+                if(adj[e.source]) adj[e.source].push(e.target);
+            });
+            
+            // Assign levels using Longest Path (BFS/Bellman-Ford variant for DAGs)
+            let changed = true;
+            let iter = 0;
+            while(changed && iter < 100) { // Limit iterations in case of cycles
+                changed = false;
+                iter++;
+                for (let u of Object.keys(adj)) {
+                    for (let v of adj[u]) {
+                        if (levels[v] < levels[u] + 1) {
+                            levels[v] = levels[u] + 1;
+                            changed = true;
                         }
-                    });
-
-                    showNodeDetails(fileId);
-                }
-            });
-        });
-
-        // Clear when clicking background
-        document.querySelector('.map-area').addEventListener('click', clearNodeSelection);
-        document.getElementById('close-panel-btn').addEventListener('click', clearNodeSelection);
-
-        function showNodeDetails(id) {
-            const data = nodeDB[id];
-            if (!data) return;
-
-            document.getElementById('panel-empty-state').classList.add('hidden');
-            document.getElementById('panel-content-state').classList.remove('hidden');
-
-            document.getElementById('panel-type').innerText = data.type;
-            document.getElementById('panel-type').style.color = data.color;
-            document.getElementById('panel-filename').innerText = data.name;
-            document.getElementById('panel-filepath').innerText = data.path;
-            document.getElementById('panel-summary').innerText = data.summary;
-
-            document.getElementById('dep-count').innerText = data.deps.length;
-            document.getElementById('panel-deps').innerHTML = data.deps.map(d => `<span class="dep-tag"><i class="fa-solid fa-file"></i> ${d}</span>`).join('') || '<span style="color:#64748b;font-size:0.8rem;">None</span>';
-
-            document.getElementById('used-count').innerText = data.usedBy.length;
-            document.getElementById('panel-used').innerHTML = data.usedBy.map(d => `<span class="dep-tag"><i class="fa-solid fa-file"></i> ${d}</span>`).join('') || '<span style="color:#64748b;font-size:0.8rem;">None</span>';
-
-            document.getElementById('panel-importance-fill').style.width = data.importance + '%';
-            document.getElementById('panel-importance-text').innerText = data.importance;
-        }
-        
-        function clearNodeSelection() {
-            nodes.forEach(n => n.classList.remove('active-node'));
-            edges.forEach(e => e.classList.remove('active-edge'));
-            fileItems.forEach(item => item.classList.remove('active-file'));
-
-            document.getElementById('panel-empty-state').classList.remove('hidden');
-            document.getElementById('panel-content-state').classList.add('hidden');
-        }
-
-        // Filter Logic
-        tags.forEach(tag => {
-            tag.addEventListener('click', () => {
-                const filter = tag.getAttribute('data-filter');
-                if (!filter) return;
-                
-                if (activeFilter === filter) {
-                    activeFilter = null;
-                    tags.forEach(t => t.classList.remove('active-filter'));
-                } else {
-                    activeFilter = filter;
-                    tags.forEach(t => t.classList.remove('active-filter'));
-                    tag.classList.add('active-filter');
-                }
-                applyFilter();
-            });
-        });
-
-        if(filterNoneBtn) {
-            filterNoneBtn.addEventListener('click', () => {
-                activeFilter = null;
-                tags.forEach(t => t.classList.remove('active-filter'));
-                applyFilter();
-            });
-        }
-
-        function applyFilter() {
-            nodes.forEach(node => {
-                if (!activeFilter) {
-                    node.style.opacity = '1';
-                } else {
-                    if (node.classList.contains('node-' + activeFilter)) {
-                        node.style.opacity = '1';
-                    } else {
-                        node.style.opacity = '0.2';
                     }
                 }
+            }
+            
+            // Group nodes by level
+            const byLevel = {};
+            data.graph.nodes.forEach(n => {
+                const lvl = levels[n.id] || 0;
+                if (!byLevel[lvl]) byLevel[lvl] = [];
+                byLevel[lvl].push(n);
             });
+            
+            let maxY = 0;
+            let maxNodesInLevel = 0;
+            Object.values(byLevel).forEach(arr => {
+                if(arr.length > maxNodesInLevel) maxNodesInLevel = arr.length;
+            });
+            
+            const nodeSpacingX = 200; // horizontal spacing between nodes
+            const containerWidth = Math.max(900, maxNodesInLevel * nodeSpacingX + 100);
+            const nodePositions = {};
+            
+            // 2. Assign X and Y coordinates based on Level
+            Object.keys(byLevel).forEach(lvlStr => {
+                const lvl = parseInt(lvlStr);
+                const arr = byLevel[lvl];
+                const y = 40 + (lvl * 150); // Vertical spacing 150px per level
+                
+                if (y + 150 > maxY) maxY = y + 150;
+                
+                // Center align the row
+                const totalWidth = arr.length * nodeSpacingX;
+                const startX = (containerWidth / 2) - (totalWidth / 2) + (nodeSpacingX / 2) - 80;
+                
+                arr.forEach((node, idx) => {
+                    const x = startX + (idx * nodeSpacingX);
+                    nodePositions[node.id] = { x, y };
+
+                    // Create Node Element
+                    const nodeEl = document.createElement('div');
+                    nodeEl.className = 'node';
+                    nodeEl.id = `node-${node.id.replace(/\//g, '_').replace(/\./g, '_')}`;
+                    nodeEl.setAttribute('data-id', node.id); 
+                    nodeEl.style.left = `${x}px`;
+                    nodeEl.style.top = `${y}px`;
+                    
+                    const isEntry = data.onboarding_path.includes(node.id);
+
+                    nodeEl.innerHTML = `
+                        <div class="node-icon" style="${isEntry ? 'background:rgba(202, 138, 4, 0.1); color:#fde047;' : ''}">
+                            <i class="fa-solid ${isEntry ? 'fa-play' : 'fa-file-code'}"></i>
+                        </div>
+                        <div class="node-text">
+                            <div class="node-title" title="${node.id}">${node.id.split('/').pop()}</div>
+                            <div class="node-type" style="font-size: 0.6rem; color: #94a3b8">${isEntry ? 'ENTRY' : 'MODULE'}</div>
+                        </div>
+                        <div class="node-dot"></div>
+                    `;
+
+                    nodeEl.onclick = (e) => {
+                        e.stopPropagation();
+                        const fileObj = data.files.find(f => f.name === node.id);
+                        if(fileObj) showFileDetails(fileObj);
+                        
+                        clearGraphSelection();
+                        nodeEl.classList.add('active-node');
+                        
+                        // Highlight connected edges beautifully
+                        document.querySelectorAll('.edge').forEach(edge => {
+                            if (edge.getAttribute('data-source') === node.id || edge.getAttribute('data-target') === node.id) {
+                                edge.classList.add('active-edge');
+                            }
+                        });
+                    };
+
+                    graphRoot.appendChild(nodeEl);
+                });
+            });
+
+            // Set final Canvas size
+            graphRoot.style.width = containerWidth + 'px';
+            graphRoot.style.height = maxY + 'px';
+
+            // 3. Create Curved SVG Line Elements (Top-to-Bottom Flow)
+            data.graph.edges.forEach(edge => {
+                const start = nodePositions[edge.source];
+                const end = nodePositions[edge.target];
+                
+                if (start && end) {
+                    const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+                    path.setAttribute("class", "edge");
+                    path.setAttribute("data-source", edge.source);
+                    path.setAttribute("data-target", edge.target);
+                    
+                    // Top-to-Bottom Bezier Curve
+                    // Start from BOTTOM-CENTER of the source node (width 160 => +80, height 50 => +50)
+                    const M = `${start.x + 80},${start.y + 50}`; 
+                    // End at TOP-CENTER of the target node
+                    const C = `C ${start.x + 80},${start.y + 110} ${end.x + 80},${end.y - 60} ${end.x + 80},${end.y - 2}`; 
+                    
+                    path.setAttribute("d", `${M} ${C}`);
+                    path.setAttribute("stroke", "rgba(255, 255, 255, 0.2)");
+                    path.setAttribute("stroke-width", "2");
+                    path.setAttribute("fill", "none");
+                    path.setAttribute("marker-end", "url(#arrow-active)"); // Keep the nice arrow head
+                    
+                    graphSvg.appendChild(path);
+                }
+            });
+
+            setupInteractions(data);
         }
 
-        // --- URL Checking Logic ---
-        document.addEventListener('DOMContentLoaded', () => {
-            const urlParams = new URLSearchParams(window.location.search);
-            const repoParam = urlParams.get('repo');
-            
-            if (!repoParam) {
-                // Show error modal if no repo is provided
-                document.getElementById('repo-error-modal').style.display = 'flex';
-                // Hide main content to prevent interacting underneath
-                document.querySelector('.dashboard-layout').style.display = 'none';
-            } else {
-                // Display the repository name in the active navbar UI
-                document.getElementById('display-repo-name').textContent = decodeURIComponent(repoParam);
-            }
+        function clearGraphSelection() {
+            document.querySelectorAll('.node').forEach(n => n.classList.remove('active-node'));
+            document.querySelectorAll('.edge').forEach(e => e.classList.remove('active-edge'));
+            document.querySelectorAll('.file-item').forEach(item => item.classList.remove('active-file'));
+        }
+
+        // Global map click to clear
+        document.querySelector('.map-area').addEventListener('click', () => {
+            clearGraphSelection();
+            document.getElementById('panel-empty-state').classList.remove('hidden');
+            document.getElementById('panel-content-state').classList.add('hidden');
         });
+
+        function setupInteractions(data) {
+            // Map file array to helper object
+            const fileMap = {};
+            data.files.forEach(f => fileMap[f.name] = f);
+
+            // Detailed Panel Logic
+            window.showFileDetails = (file) => {
+                document.getElementById('panel-empty-state').classList.add('hidden');
+                document.getElementById('panel-content-state').classList.remove('hidden');
+
+                document.getElementById('panel-type').innerText = "PYTHON FILE";
+                document.getElementById('panel-filename').innerText = file.name.split('/').pop();
+                document.getElementById('panel-filepath').innerText = file.name;
+                document.getElementById('panel-summary').innerText = file.summary;
+
+                document.getElementById('dep-count').innerText = file.dependencies.length;
+                document.getElementById('panel-deps').innerHTML = file.dependencies.map(d => `<span class="dep-tag">${d}</span>`).join('');
+
+                document.getElementById('used-count').innerText = file.used_by.length;
+                document.getElementById('panel-used').innerHTML = file.used_by.map(d => `<span class="dep-tag">${d}</span>`).join('');
+                
+                // Bonus: Importance Score (Mocking based on connections if not in DB)
+                const importance = Math.min(100, (file.used_by.length * 20) + 10);
+                document.getElementById('panel-importance-fill').style.width = importance + '%';
+                document.getElementById('panel-importance-text').innerText = importance;
+            };
+        }
+
+        document.getElementById('close-panel-btn').onclick = () => {
+            document.getElementById('panel-empty-state').classList.remove('hidden');
+            document.getElementById('panel-content-state').classList.add('hidden');
+        };
+
+        initDashboard();
 
         // Zoom Logic
         let currentZoom = 1;
         const graphContainer = document.querySelector('.graph-container');
-        
-        // Ensure smooth zooming
-        graphContainer.style.transition = 'transform 0.3s ease-out';
-        graphContainer.style.transformOrigin = 'center top'; // Scales from the top center for a nice effect
-
         document.getElementById('zoom-in-btn').addEventListener('click', () => {
             currentZoom = Math.min(currentZoom + 0.15, 2.5);
             graphContainer.style.transform = `scale(${currentZoom})`;
         });
-
         document.getElementById('zoom-out-btn').addEventListener('click', () => {
             currentZoom = Math.max(currentZoom - 0.15, 0.4);
             graphContainer.style.transform = `scale(${currentZoom})`;
         });
-
-        document.getElementById('zoom-fit-btn').addEventListener('click', () => {
-            const mapArea = document.querySelector('.map-area');
-            if (!document.fullscreenElement) {
-                if (mapArea.requestFullscreen) {
-                    mapArea.requestFullscreen().catch(err => console.log(err));
-                }
-            } else {
-                if (document.exitFullscreen) {
-                    document.exitFullscreen();
-                }
-            }
-            
-            // Also reset zoom on click
-            currentZoom = 1;
-            graphContainer.style.transform = `scale(${currentZoom})`;
-        });
+    </script>
     </script>
 </body>
 </html>

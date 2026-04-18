@@ -1,0 +1,8 @@
+fastapi
+uvicorn
+pymongo
+networkx
+openai
+GitPython
+python-dotenv
+pydantic
