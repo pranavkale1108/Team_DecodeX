@@ -40,7 +40,13 @@
 
     <div class="dashboard-layout">
         <!-- Sidebar -->
-        <aside class="sidebar">
+        <aside class="sidebar" id="left-sidebar">
+            <div class="sidebar-toolbar">
+                <button class="sidebar-toggle-btn" id="sidebar-toggle-btn" title="Collapse sidebar" aria-label="Collapse sidebar">
+                    <i class="fa-solid fa-bars"></i>
+                </button>
+                <span>Explore</span>
+            </div>
             <div class="sidebar-search">
                 <i class="fa-solid fa-magnifying-glass search-icon-sm"></i>
                 <input type="text" placeholder="Ask about the codebase..." class="sidebar-search-input">
@@ -56,10 +62,10 @@
                     </div>
                 </div>
                 <div class="example-pills">
-                    <button class="example-pill">"Where is authentication handled?"</button>
-                    <button class="example-pill">"Show API flow"</button>
-                    <button class="example-pill">"What is the entry point?"</button>
-                    <button class="example-pill">"Find all routes"</button>
+                    <button class="example-pill" data-query="auth">"Where is authentication handled?"</button>
+                    <button class="example-pill" data-query="api-flow">"Show API flow"</button>
+                    <button class="example-pill" data-query="entry">"What is the entry point?"</button>
+                    <button class="example-pill" data-query="routes">"Find all routes"</button>
                 </div>
             </div>
 
@@ -145,6 +151,10 @@
             </div>
         </aside>
 
+        <div class="resizer left-resizer" title="Drag to resize sidebar" aria-hidden="true">
+            <i class="fa-solid fa-left-right"></i>
+        </div>
+
         <!-- Main Content Area -->
         <main class="dashboard-main dashboard-main-content">
             <!-- Top Map Area -->
@@ -156,6 +166,7 @@
                     <button id="zoom-in-btn"><i class="fa-solid fa-plus"></i></button>
                     <button id="zoom-out-btn"><i class="fa-solid fa-minus"></i></button>
                     <button id="zoom-fit-btn"><i class="fa-solid fa-expand"></i></button>
+                    <button id="fullscreen-graph-btn" title="Fullscreen graph" aria-label="Fullscreen graph"><i class="fa-solid fa-up-right-and-down-left-from-center"></i></button>
                 </div>
                 
                 <!-- Filter Bar -->
@@ -209,7 +220,14 @@
             </div>
         </main>
 
+        <div class="resizer right-resizer" title="Drag to resize details panel" aria-hidden="true">
+            <i class="fa-solid fa-left-right"></i>
+        </div>
+
         <!-- Right Panel (Details) -->
+        <button class="right-panel-toggle" id="right-panel-toggle" title="Collapse details panel" aria-label="Collapse details panel">
+            <i class="fa-solid fa-chevron-right"></i>
+        </button>
         <aside class="right-panel" id="details-panel">
             <div id="panel-empty-state" class="empty-state">
                 <div class="empty-icon"><i class="fa-solid fa-file-code"></i></div>
@@ -256,8 +274,14 @@
         const API_BASE = "/api";
         const urlParams = new URLSearchParams(window.location.search);
         const repoUrl = urlParams.get('repo');
+        const currentRepo = parseGithubRepo(repoUrl);
+        const githubBranch = "main";
         
         let repoData = null;
+        let latestNodePositions = {};
+        let latestGraphMetrics = { nodeWidth: 170, nodeHeight: 54 };
+        let latestTreeNodeMap = {};
+        let collapsedFolders = new Set();
 
         // UI Elements
         const loadingOverlay = document.createElement('div');
@@ -295,6 +319,48 @@
             }
         }
 
+        function parseGithubRepo(url) {
+            if (!url) return null;
+
+            try {
+                const parsed = new URL(url);
+                const parts = parsed.pathname.replace(/^\/|\/$/g, '').split('/');
+                if (parsed.hostname.includes('github.com') && parts.length >= 2) {
+                    return {
+                        owner: parts[0],
+                        name: parts[1].replace(/\.git$/, '')
+                    };
+                }
+            } catch (error) {
+                const match = url.match(/github\.com[:/]+([^/]+)\/([^/.#?]+)(?:\.git)?/i);
+                if (match) return { owner: match[1], name: match[2] };
+            }
+
+            return null;
+        }
+
+        function encodeGithubPath(path) {
+            return path.split('/').map(part => encodeURIComponent(part)).join('/');
+        }
+
+        function openNodeInGithub(node) {
+            if (!currentRepo) return;
+
+            const filePath = node.fullPath || node.id;
+            const repoBase = `https://github.com/${currentRepo.owner}/${currentRepo.name}`;
+            let githubUrl = repoBase;
+
+            if (node.id === '__repo_root__') {
+                githubUrl = repoBase;
+            } else if (node.kind === 'folder') {
+                githubUrl = `${repoBase}/tree/${githubBranch}/${encodeGithubPath(filePath)}`;
+            } else {
+                githubUrl = `${repoBase}/blob/${githubBranch}/${encodeGithubPath(filePath)}`;
+            }
+
+            window.open(githubUrl, '_blank', 'noopener,noreferrer');
+        }
+
         function renderDashboard(data) {
             // Update Repo Name
             document.getElementById('display-repo-name').innerText = data.repo_name;
@@ -313,7 +379,7 @@
                         <div class="file-path">${file.name}</div>
                     </div>
                 `;
-                item.onclick = () => showFileDetails(file);
+                item.onclick = () => selectFile(file);
                 fileList.appendChild(item);
             });
 
@@ -332,203 +398,302 @@
                 `;
                 item.onclick = () => {
                    const fileObj = data.files.find(f => f.name === path);
-                   if(fileObj) showFileDetails(fileObj);
+                   if(fileObj) selectFile(fileObj);
                 };
                 timeline.appendChild(item);
             });
 
-            // --- Dynamic Graph Rendering (Hierarchical Tree Syntax) ---
+            renderHierarchyGraph(data);
+            setupInteractions(data);
+        }
+
+        function renderHierarchyGraph(data, options = {}) {
             const graphRoot = document.getElementById('graph-root');
             const graphSvg = document.getElementById('graph-svg');
-            
-            // Clear existing
+
             graphRoot.querySelectorAll('.node').forEach(n => n.remove());
             graphSvg.querySelectorAll('.edge').forEach(e => e.remove());
 
-            // -- Classify node types based on path keywords --
-            function classifyNode(nodeId, isEntry) {
-                if (isEntry) return 'entry';
-                const lower = nodeId.toLowerCase();
-                if (lower.includes('route') || lower.includes('router')) return 'route';
-                if (lower.includes('service') || lower.includes('handler')) return 'service';
-                if (lower.includes('config') || lower.includes('setting') || lower.includes('env')) return 'config';
-                if (lower.includes('auth') || lower.includes('login') || lower.includes('token')) return 'auth';
-                if (lower.includes('api') || lower.includes('endpoint')) return 'api';
-                return 'module';
-            }
+            const tree = buildPathTree(data);
+            latestTreeNodeMap = tree.nodeMap;
 
-            const typeColors = {
-                entry:   { bg: 'rgba(202,138,4,0.15)',   color: '#fde047', icon: 'fa-play',          label: 'ENTRY' },
-                route:   { bg: 'rgba(147,51,234,0.15)',  color: '#d8b4fe', icon: 'fa-network-wired', label: 'ROUTE' },
-                service: { bg: 'rgba(8,145,178,0.15)',   color: '#67e8f9', icon: 'fa-layer-group',   label: 'SERVICE' },
-                config:  { bg: 'rgba(71,85,105,0.15)',   color: '#cbd5e1', icon: 'fa-gear',          label: 'CONFIG' },
-                auth:    { bg: 'rgba(225,29,72,0.15)',   color: '#fda4af', icon: 'fa-shield-halved', label: 'AUTH' },
-                api:     { bg: 'rgba(22,163,74,0.15)',   color: '#86efac', icon: 'fa-plug',          label: 'API' },
-                module:  { bg: 'rgba(255,255,255,0.05)', color: '#94a3b8', icon: 'fa-file-code',    label: 'MODULE' }
-            };
+            const visibleNodes = [];
+            const visibleEdges = [];
+            collectVisibleTree(tree.root, visibleNodes, visibleEdges, 0);
 
-            const typeCounts = { entry:0, route:0, service:0, config:0, auth:0, api:0, module:0 };
-
-            // 1. Calculate Tree Depth (Levels)
-            const levels = {};
-            const adj = {};
-            
-            data.graph.nodes.forEach(n => {
-                adj[n.id] = [];
-                levels[n.id] = 0;
-            });
-            
-            data.graph.edges.forEach(e => {
-                if(adj[e.source]) adj[e.source].push(e.target);
-            });
-            
-            // Assign levels using Longest-Path relaxation (DAG-safe with cycle limit)
-            let changed = true, iter = 0;
-            while(changed && iter < 200) {
-                changed = false; iter++;
-                for (let u of Object.keys(adj)) {
-                    for (let v of adj[u]) {
-                        if (levels[v] < levels[u] + 1) {
-                            levels[v] = levels[u] + 1;
-                            changed = true;
-                        }
-                    }
-                }
-            }
-            
-            // Group nodes by level
-            const byLevel = {};
-            data.graph.nodes.forEach(n => {
-                const lvl = levels[n.id] || 0;
-                if (!byLevel[lvl]) byLevel[lvl] = [];
-                byLevel[lvl].push(n);
-            });
-            
-            const NODE_W = 170, NODE_H = 54;
-            const SPACING_X = 210, SPACING_Y = 160;
-            const PADDING = 60;
-            
-            let maxNodesInLevel = 0;
-            Object.values(byLevel).forEach(arr => { if(arr.length > maxNodesInLevel) maxNodesInLevel = arr.length; });
-            
-            const numLevels = Object.keys(byLevel).length;
-            const containerWidth  = Math.max(800, maxNodesInLevel * SPACING_X + PADDING * 2);
-            const containerHeight = Math.max(500, numLevels * SPACING_Y + PADDING * 2);
-            
+            const NODE_W = 190;
+            const NODE_H = 58;
+            const SPACING_X = 235;
+            const SPACING_Y = 125;
+            const PADDING = 80;
             const nodePositions = {};
-            
-            // 2. Assign X/Y coordinates and create node elements
-            Object.keys(byLevel).sort((a,b) => +a - +b).forEach(lvlStr => {
-                const lvl = parseInt(lvlStr);
-                const arr = byLevel[lvl];
-                const y = PADDING + lvl * SPACING_Y;
-                const rowWidth = arr.length * SPACING_X - (SPACING_X - NODE_W);
-                const startX = (containerWidth / 2) - (rowWidth / 2);
-                
-                arr.forEach((node, idx) => {
-                    const x = startX + idx * SPACING_X;
-                    nodePositions[node.id] = { x, y };
+            const byDepth = {};
 
-                    const isEntry = data.onboarding_path && data.onboarding_path.includes(node.id);
-                    const nodeType = classifyNode(node.id, isEntry);
-                    typeCounts[nodeType] = (typeCounts[nodeType] || 0) + 1;
-                    const tc = typeColors[nodeType];
+            visibleNodes.forEach(node => {
+                if (!byDepth[node.depth]) byDepth[node.depth] = [];
+                byDepth[node.depth].push(node);
+            });
 
-                    const nodeEl = document.createElement('div');
-                    nodeEl.className = 'node';
-                    nodeEl.id = `node-${node.id.replace(/[/\\.]/g, '_')}`;
-                    nodeEl.setAttribute('data-id', node.id);
-                    nodeEl.setAttribute('data-type', nodeType);
-                    nodeEl.style.left = `${x}px`;
-                    nodeEl.style.top  = `${y}px`;
-                    nodeEl.style.width = `${NODE_W}px`;
-                    nodeEl.style.height = `${NODE_H}px`;
-
-                    const importancePct = Math.round((node.importance || 0) * 100);
-
-                    nodeEl.innerHTML = `
-                        <div class="node-icon" style="background:${tc.bg}; color:${tc.color};">
-                            <i class="fa-solid ${tc.icon}"></i>
-                        </div>
-                        <div class="node-text">
-                            <div class="node-title" title="${node.id}">${node.id.split('/').pop()}</div>
-                            <div class="node-type" style="color:${tc.color}">${tc.label}</div>
-                        </div>
-                        <div class="node-dot" style="background:${tc.color}; box-shadow:0 0 5px ${tc.color};"></div>
-                    `;
-
-                    nodeEl.addEventListener('click', (e) => {
-                        e.stopPropagation();
-                        const fileObj = data.files.find(f => f.name === node.id);
-                        if (fileObj) showFileDetails(fileObj);
-                        clearGraphSelection();
-                        nodeEl.classList.add('active-node');
-                        nodeEl.style.borderColor = tc.color;
-                        nodeEl.style.boxShadow = `0 0 18px ${tc.color}55`;
-                        document.querySelectorAll('.edge').forEach(edge => {
-                            if (edge.getAttribute('data-source') === node.id || edge.getAttribute('data-target') === node.id) {
-                                edge.classList.add('active-edge');
-                                edge.style.stroke = tc.color;
-                            }
-                        });
-                        // Sync sidebar highlight
-                        document.querySelectorAll('.file-item').forEach(fi => {
-                            fi.classList.toggle('active-file', fi.getAttribute('data-id') === node.id);
-                        });
-                    });
-
-                    graphRoot.appendChild(nodeEl);
+            Object.keys(byDepth).forEach(depthKey => {
+                byDepth[depthKey].forEach((node, index) => {
+                    nodePositions[node.id] = {
+                        x: PADDING + index * SPACING_X,
+                        y: PADDING + Number(depthKey) * SPACING_Y
+                    };
                 });
             });
 
-            // Set canvas dimensions and sync SVG size
-            graphRoot.style.width  = containerWidth  + 'px';
-            graphRoot.style.height = containerHeight + 'px';
-            graphSvg.setAttribute('width',  containerWidth);
-            graphSvg.setAttribute('height', containerHeight);
-            graphSvg.style.width  = containerWidth  + 'px';
-            graphSvg.style.height = containerHeight + 'px';
+            latestNodePositions = nodePositions;
+            latestGraphMetrics = { nodeWidth: NODE_W, nodeHeight: NODE_H };
 
-            // Update filter tag counts
-            Object.keys(typeCounts).forEach(type => {
-                const el = document.getElementById(`count-${type}`);
-                if (el) el.textContent = typeCounts[type];
+            let maxX = 0;
+            let maxY = 0;
+            Object.values(nodePositions).forEach(pos => {
+                maxX = Math.max(maxX, pos.x + NODE_W);
+                maxY = Math.max(maxY, pos.y + NODE_H);
             });
 
-            // 3. Create Cubic Bezier SVG edges
-            data.graph.edges.forEach(edge => {
+            const containerWidth = Math.max(900, maxX + PADDING);
+            const containerHeight = Math.max(600, maxY + PADDING);
+            graphRoot.style.width = containerWidth + 'px';
+            graphRoot.style.height = containerHeight + 'px';
+            graphSvg.setAttribute('width', containerWidth);
+            graphSvg.setAttribute('height', containerHeight);
+            graphSvg.style.width = containerWidth + 'px';
+            graphSvg.style.height = containerHeight + 'px';
+
+            const typeCounts = { entry: 0, service: 0, route: 0, config: 0, module: 0 };
+
+            visibleEdges.forEach(edge => {
                 const start = nodePositions[edge.source];
-                const end   = nodePositions[edge.target];
+                const end = nodePositions[edge.target];
                 if (!start || !end) return;
 
-                const x1 = start.x + NODE_W / 2,  y1 = start.y + NODE_H;
-                const x2 = end.x   + NODE_W / 2,  y2 = end.y;
-                const cy1 = y1 + SPACING_Y * 0.45;
-                const cy2 = y2 - SPACING_Y * 0.45;
+                const x1 = start.x + NODE_W / 2;
+                const y1 = start.y + NODE_H;
+                const x2 = end.x + NODE_W / 2;
+                const y2 = end.y;
+                const midY = y1 + (y2 - y1) / 2;
 
                 const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-                path.setAttribute('class', 'edge');
+                path.setAttribute('class', 'edge tree-edge');
                 path.setAttribute('data-source', edge.source);
                 path.setAttribute('data-target', edge.target);
-                path.setAttribute('d', `M ${x1},${y1} C ${x1},${cy1} ${x2},${cy2} ${x2},${y2}`);
-                path.setAttribute('stroke', 'rgba(255,255,255,0.18)');
+                path.setAttribute('d', `M ${x1},${y1} C ${x1},${midY} ${x2},${midY} ${x2},${y2}`);
+                path.setAttribute('stroke', 'rgba(148,163,184,0.32)');
                 path.setAttribute('stroke-width', '1.5');
                 path.setAttribute('fill', 'none');
                 path.setAttribute('marker-end', 'url(#arrow-default)');
                 graphSvg.appendChild(path);
             });
 
-            setupInteractions(data);
+            visibleNodes.forEach(node => {
+                const pos = nodePositions[node.id];
+                if (!pos) return;
+
+                const category = classifyPath(node.id, node.kind);
+                if (node.kind === 'file') typeCounts[category] = (typeCounts[category] || 0) + 1;
+
+                const nodeEl = document.createElement('div');
+                nodeEl.className = `node ${node.kind === 'folder' ? 'folder-node' : 'file-node'}`;
+                nodeEl.id = `node-${safeDomId(node.id)}`;
+                nodeEl.setAttribute('data-id', node.id);
+                nodeEl.setAttribute('data-kind', node.kind);
+                nodeEl.setAttribute('data-type', category);
+                nodeEl.setAttribute('data-path', node.fullPath || '');
+                nodeEl.title = node.kind === 'file'
+                    ? 'Double click to open this file in GitHub'
+                    : 'Click to collapse or expand. Double click to open this folder in GitHub';
+                nodeEl.style.left = `${pos.x}px`;
+                nodeEl.style.top = `${pos.y}px`;
+                nodeEl.style.width = `${NODE_W}px`;
+                nodeEl.style.height = `${NODE_H}px`;
+
+                const hasChildren = node.children.length > 0;
+                const collapsed = collapsedFolders.has(node.id);
+                const icon = node.kind === 'folder'
+                    ? (collapsed ? 'fa-folder' : 'fa-folder-open')
+                    : getFileIcon(node.label);
+                const label = node.kind === 'folder' ? 'FOLDER' : category.toUpperCase();
+
+                nodeEl.innerHTML = `
+                    <div class="node-icon">
+                        <i class="fa-solid ${icon}"></i>
+                    </div>
+                    <div class="node-text">
+                        <div class="node-title" title="${node.fullPath || node.label}">${node.label}</div>
+                        <div class="node-type">${label}${hasChildren ? ` · ${node.children.length}` : ''}</div>
+                    </div>
+                    ${node.kind === 'folder' ? `<div class="node-collapse"><i class="fa-solid ${collapsed ? 'fa-chevron-right' : 'fa-chevron-down'}"></i></div>` : '<div class="node-dot"></div>'}
+                `;
+
+                nodeEl.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    if (e.detail > 1) return;
+                    if (node.kind === 'folder') {
+                        if (node.id !== '__repo_root__') {
+                            if (collapsedFolders.has(node.id)) collapsedFolders.delete(node.id);
+                            else collapsedFolders.add(node.id);
+                        }
+                        renderHierarchyGraph(repoData, { preserveView: true });
+                        showTreeNodeDetails(latestTreeNodeMap[node.id]);
+                        const freshNode = findNodeEl(node.id);
+                        if (freshNode) {
+                            freshNode.classList.add('active-node');
+                            fitNodesToViewport([freshNode]);
+                        }
+                        return;
+                    }
+
+                    const fileObj = repoData.files.find(f => f.name === node.id);
+                    selectFile(fileObj || { name: node.id, dependencies: [], used_by: [] }, { skipZoom: true });
+                });
+
+                nodeEl.addEventListener('dblclick', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    openNodeInGithub(node);
+                });
+
+                graphRoot.appendChild(nodeEl);
+            });
+
+            if (!options.preserveView) {
+                requestAnimationFrame(() => {
+                    const rootEl = findNodeEl('__repo_root__');
+                    const rootChildren = tree.root.children.slice(0, 6).map(child => findNodeEl(child.id)).filter(Boolean);
+                    if (rootEl) fitNodesToViewport([rootEl, ...rootChildren]);
+                });
+            }
+
+            Object.keys(typeCounts).forEach(type => {
+                const el = document.getElementById(`count-${type}`);
+                if (el) el.textContent = typeCounts[type] || 0;
+            });
         }
 
-        function clearGraphSelection() {
-            document.querySelectorAll('.node').forEach(n => n.classList.remove('active-node'));
-            document.querySelectorAll('.edge').forEach(e => e.classList.remove('active-edge'));
+        function buildPathTree(data) {
+            const nodeMap = {};
+            const rootLabel = (data.repo_name || 'repository').split('/').pop();
+            const root = {
+                id: '__repo_root__',
+                label: rootLabel,
+                kind: 'folder',
+                fullPath: '',
+                parent: null,
+                depth: 0,
+                children: []
+            };
+            nodeMap[root.id] = root;
+
+            function ensureNode(id, label, kind, parentId, depth) {
+                if (!nodeMap[id]) {
+                    nodeMap[id] = { id, label, kind, fullPath: id, parent: parentId, depth, children: [] };
+                }
+                if (kind === 'file') nodeMap[id].kind = 'file';
+
+                const parent = nodeMap[parentId];
+                if (parent && !parent.children.some(child => child.id === id)) {
+                    parent.children.push(nodeMap[id]);
+                }
+                return nodeMap[id];
+            }
+
+            data.files
+                .map(file => file.name)
+                .filter(Boolean)
+                .sort((a, b) => a.localeCompare(b))
+                .forEach(filePath => {
+                    const parts = filePath.split('/').filter(Boolean);
+                    let parentId = root.id;
+                    let currentParts = [];
+
+                    parts.forEach((part, index) => {
+                        currentParts.push(part);
+                        const id = currentParts.join('/');
+                        const kind = index === parts.length - 1 ? 'file' : 'folder';
+                        ensureNode(id, part, kind, parentId, index + 1);
+                        parentId = id;
+                    });
+                });
+
+            Object.values(nodeMap).forEach(node => {
+                node.children.sort((a, b) => {
+                    if (a.kind !== b.kind) return a.kind === 'folder' ? -1 : 1;
+                    return a.label.localeCompare(b.label);
+                });
+            });
+
+            return { root, nodeMap };
+        }
+
+        function collectVisibleTree(node, nodes, edges, depth) {
+            node.depth = depth;
+            nodes.push(node);
+            if (collapsedFolders.has(node.id)) return;
+
+            node.children.forEach(child => {
+                child.depth = depth + 1;
+                edges.push({ source: node.id, target: child.id });
+                collectVisibleTree(child, nodes, edges, depth + 1);
+            });
+        }
+
+        function isHiddenByCollapsedParent(nodeId) {
+            const node = latestTreeNodeMap[nodeId];
+            let parentId = node?.parent;
+            while (parentId) {
+                if (collapsedFolders.has(parentId)) return true;
+                parentId = latestTreeNodeMap[parentId]?.parent;
+            }
+            return false;
+        }
+
+        function classifyPath(nodeId, kind) {
+            if (kind === 'folder') return 'module';
+            const lower = nodeId.toLowerCase();
+            const base = lower.split('/').pop();
+            if (['app.py', 'main.py', 'server.py', 'manage.py', 'wsgi.py', 'asgi.py', 'index.js', 'index.ts', 'index.tsx'].includes(base)) return 'entry';
+            if (lower.includes('route') || lower.includes('view') || lower.includes('controller') || lower.includes('blueprint')) return 'route';
+            if (lower.includes('service') || lower.includes('handler') || lower.includes('task')) return 'service';
+            if (lower.includes('config') || lower.includes('setting') || lower.includes('env') || lower.endsWith('.toml') || lower.endsWith('.yml') || lower.endsWith('.yaml')) return 'config';
+            return 'module';
+        }
+
+        function getFileIcon(fileName) {
+            const lower = fileName.toLowerCase();
+            if (lower.endsWith('.html')) return 'fa-file-code';
+            if (lower.endsWith('.css')) return 'fa-palette';
+            if (lower.endsWith('.json') || lower.endsWith('.toml') || lower.endsWith('.yml') || lower.endsWith('.yaml')) return 'fa-sliders';
+            if (lower.endsWith('.md') || lower.endsWith('.rst') || lower.endsWith('.txt')) return 'fa-file-lines';
+            return 'fa-file-code';
+        }
+
+        function safeDomId(id) {
+            return id.replace(/[^a-zA-Z0-9_-]/g, '_');
+        }
+
+        function clearGraphSelection(resetOpacity = false) {
+            document.querySelectorAll('.node').forEach(n => {
+                n.classList.remove('active-node', 'query-highlight', 'flow-highlight');
+                n.style.borderColor = '';
+                n.style.boxShadow = '';
+                if (resetOpacity) n.style.opacity = '1';
+            });
+            document.querySelectorAll('.edge').forEach(e => {
+                e.classList.remove('active-edge', 'query-edge');
+                e.style.stroke = '';
+                e.style.strokeWidth = '';
+                e.style.filter = '';
+                if (resetOpacity) e.style.opacity = '1';
+            });
             document.querySelectorAll('.file-item').forEach(item => item.classList.remove('active-file'));
+            document.querySelectorAll('.example-pill').forEach(btn => btn.classList.remove('active-example'));
         }
 
         // Global map click to clear
-        document.querySelector('.map-area').addEventListener('click', () => {
+        document.querySelector('.map-area').addEventListener('click', (event) => {
+            if (event.target.closest('.zoom-controls, .filter-bar')) return;
             clearGraphSelection();
             document.getElementById('panel-empty-state').classList.remove('hidden');
             document.getElementById('panel-content-state').classList.add('hidden');
@@ -544,24 +709,30 @@
                 document.getElementById('panel-empty-state').classList.add('hidden');
                 document.getElementById('panel-content-state').classList.remove('hidden');
 
-                document.getElementById('panel-type').innerText = "PYTHON FILE";
+                document.getElementById('panel-type').innerText = getFileTypeLabel(file.name);
                 document.getElementById('panel-filename').innerText = file.name.split('/').pop();
                 document.getElementById('panel-filepath').innerText = file.name;
-                document.getElementById('panel-summary').innerText = file.summary;
+                const generatedSummary = file.summary && !file.summary.startsWith('File dealing with imports:')
+                    ? file.summary
+                    : getRuleBasedFileSummary(file.name);
+                document.getElementById('panel-summary').innerText = generatedSummary;
 
-                document.getElementById('dep-count').innerText = file.dependencies.length;
-                document.getElementById('panel-deps').innerHTML = file.dependencies.map(d => `<span class="dep-tag">${d}</span>`).join('');
+                const dependencies = file.dependencies || [];
+                const usedBy = file.used_by || [];
+                document.getElementById('dep-count').innerText = dependencies.length;
+                document.getElementById('panel-deps').innerHTML = dependencies.map(d => `<span class="dep-tag">${d}</span>`).join('');
 
-                document.getElementById('used-count').innerText = file.used_by.length;
-                document.getElementById('panel-used').innerHTML = file.used_by.map(d => `<span class="dep-tag">${d}</span>`).join('');
+                document.getElementById('used-count').innerText = usedBy.length;
+                document.getElementById('panel-used').innerHTML = usedBy.map(d => `<span class="dep-tag">${d}</span>`).join('');
                 
                 // Bonus: Importance Score (Mocking based on connections if not in DB)
-                const importance = Math.min(100, (file.used_by.length * 20) + 10);
+                const importance = Math.min(100, (usedBy.length * 20) + 10);
                 document.getElementById('panel-importance-fill').style.width = importance + '%';
                 document.getElementById('panel-importance-text').innerText = importance;
             };
 
-            // Setup AI Query Listener
+            // Setup query listener. Known example-style questions are answered locally;
+            // other questions still use the backend AI endpoint.
             const searchInput = document.querySelector('.sidebar-search-input');
             const typingStatus = document.getElementById('ai-typing-status');
             if (searchInput) {
@@ -569,6 +740,13 @@
                     if (e.key === 'Enter') {
                         const query = e.target.value.trim();
                         if (!query || !repoUrl) return;
+
+                        const ruleType = getRuleTypeFromText(query);
+                        if (ruleType) {
+                            handleRuleBasedQuery(ruleType);
+                            searchInput.value = '';
+                            return;
+                        }
                         
                         searchInput.disabled = true;
                         typingStatus.style.display = 'block';
@@ -610,16 +788,257 @@
                 });
             }
 
-            // Make example pills interactable
+            // Make example pills run local graph queries.
             document.querySelectorAll('.example-pill').forEach(btn => {
                 btn.addEventListener('click', (e) => {
-                    if (searchInput) {
-                        const q = e.target.innerText.replace(/"/g, '');
-                        searchInput.value = q;
-                        searchInput.dispatchEvent(new KeyboardEvent('keydown', {'key': 'Enter'}));
-                    }
+                    handleRuleBasedQuery(e.currentTarget.dataset.query);
                 });
             });
+        }
+
+        function getRuleBasedFileSummary(fileName) {
+            const lower = fileName.toLowerCase();
+            const base = lower.split('/').pop();
+            if (['app.py', 'main.py', 'server.py', 'manage.py', 'index.js', 'index.ts', 'index.tsx'].includes(base)) {
+                return 'Main application entry point that starts the app or wires the primary runtime together.';
+            }
+            if (lower.includes('config') || lower.includes('settings') || lower.includes('env')) {
+                return 'Configuration file that centralizes app settings, environment values, or runtime options.';
+            }
+            if (lower.includes('route') || lower.includes('view') || lower.includes('controller') || lower.includes('blueprint')) {
+                return 'Request routing or view layer file that connects incoming actions to application behavior.';
+            }
+            if (lower.includes('auth') || lower.includes('login') || lower.includes('security') || lower.includes('token')) {
+                return 'Authentication or security-related file that likely handles identity, sessions, or access control.';
+            }
+            if (lower.includes('util') || lower.includes('helper')) {
+                return 'Helper utilities used across multiple modules.';
+            }
+            if (lower.endsWith('.html')) {
+                return 'Template or HTML view file rendered by the application UI.';
+            }
+            if (lower.endsWith('.css')) {
+                return 'Stylesheet file that controls visual presentation.';
+            }
+            if (lower.endsWith('.json') || lower.endsWith('.toml') || lower.endsWith('.yml') || lower.endsWith('.yaml')) {
+                return 'Structured configuration or metadata file used by tooling or the app runtime.';
+            }
+            if (lower.includes('test')) {
+                return 'Test file that verifies behavior and protects the codebase from regressions.';
+            }
+            return 'Core logic file in this repository. Check its dependencies and used-by list to understand where it fits.';
+        }
+
+        function getFileTypeLabel(fileName) {
+            const extension = fileName.split('.').pop();
+            if (!extension || extension === fileName) return 'FILE';
+            return `${extension.toUpperCase()} FILE`;
+        }
+
+        function showTreeNodeDetails(node) {
+            if (!node) return;
+
+            const descendantFiles = [];
+            function walk(current) {
+                current.children.forEach(child => {
+                    if (child.kind === 'file') descendantFiles.push(child.id);
+                    else walk(child);
+                });
+            }
+            walk(node);
+
+            document.getElementById('panel-empty-state').classList.add('hidden');
+            document.getElementById('panel-content-state').classList.remove('hidden');
+            document.getElementById('panel-type').innerText = 'FOLDER';
+            document.getElementById('panel-filename').innerText = node.label;
+            document.getElementById('panel-filepath').innerText = node.fullPath || 'Repository root';
+            document.getElementById('panel-summary').innerText = node.id === '__repo_root__'
+                ? 'Top-level repository node. It contains the folder/file tree built from full paths.'
+                : `Folder node containing ${node.children.length} direct item${node.children.length === 1 ? '' : 's'} and ${descendantFiles.length} file${descendantFiles.length === 1 ? '' : 's'} under it. Click this folder to collapse or expand its children.`;
+
+            document.getElementById('dep-count').innerText = node.children.length;
+            document.getElementById('panel-deps').innerHTML = node.children.slice(0, 12).map(child => (
+                `<span class="dep-tag"><i class="fa-solid ${child.kind === 'folder' ? 'fa-folder' : getFileIcon(child.label)}"></i>${child.label}</span>`
+            )).join('');
+            document.getElementById('used-count').innerText = descendantFiles.length;
+            document.getElementById('panel-used').innerHTML = descendantFiles.slice(0, 8).map(name => `<span class="dep-tag">${name}</span>`).join('');
+
+            const importance = Math.min(100, Math.max(10, descendantFiles.length * 4));
+            document.getElementById('panel-importance-fill').style.width = importance + '%';
+            document.getElementById('panel-importance-text').innerText = importance;
+        }
+
+        function selectFile(file, options = {}) {
+            showFileDetails(file);
+            focusNodeById(file.name, options);
+        }
+
+        function getAllNodeIds() {
+            return Array.from(document.querySelectorAll('.node')).map(node => node.getAttribute('data-id'));
+        }
+
+        function getVisibleFileNodeIds() {
+            return Array.from(document.querySelectorAll('.node[data-kind="file"]')).map(node => node.getAttribute('data-id'));
+        }
+
+        function findNodeEl(nodeId) {
+            return Array.from(document.querySelectorAll('.node')).find(node => node.getAttribute('data-id') === nodeId);
+        }
+
+        function focusNodeById(nodeId, options = {}) {
+            const nodeEl = findNodeEl(nodeId);
+            if (!nodeEl) return;
+
+            clearGraphSelection(true);
+            nodeEl.classList.add('active-node');
+            document.querySelectorAll('.edge').forEach(edge => {
+                if (edge.getAttribute('data-source') === nodeId || edge.getAttribute('data-target') === nodeId) {
+                    edge.classList.add('active-edge');
+                }
+            });
+            document.querySelectorAll('.file-item').forEach(item => {
+                item.classList.toggle('active-file', item.getAttribute('data-id') === nodeId);
+            });
+            if (!options.skipZoom) fitNodesToViewport([nodeEl]);
+        }
+
+        function getRuleTypeFromText(query) {
+            const lower = query.toLowerCase();
+            if (lower.includes('auth') || lower.includes('login') || lower.includes('security')) return 'auth';
+            if (lower.includes('api') && lower.includes('flow')) return 'api-flow';
+            if (lower.includes('entry') || lower.includes('start')) return 'entry';
+            if (lower.includes('route') || lower.includes('view') || lower.includes('controller')) return 'routes';
+            return null;
+        }
+
+        function getRuleMatches(type) {
+            const nodeIds = getVisibleFileNodeIds();
+            const entryNames = ['app.py', 'main.py', 'server.py', 'manage.py', 'wsgi.py', 'asgi.py', 'index.js', 'index.ts', 'index.tsx'];
+            const baseName = id => id.toLowerCase().split('/').pop();
+
+            if (type === 'auth') {
+                return nodeIds.filter(id => /auth|login|security|password|session|token/.test(id.toLowerCase()));
+            }
+            if (type === 'entry') {
+                const matches = nodeIds.filter(id => entryNames.includes(baseName(id)));
+                return matches.length ? matches : (repoData?.onboarding_path || []).slice(0, 3);
+            }
+            if (type === 'routes') {
+                return nodeIds.filter(id => /route|view|controller|blueprint|url/.test(id.toLowerCase()));
+            }
+            if (type === 'api-flow') {
+                const entries = getRuleMatches('entry').slice(0, 3);
+                const core = nodeIds.filter(id => /app|core|service|handler|blueprint|ctx|sansio|request/.test(id.toLowerCase())).slice(0, 7);
+                const utils = nodeIds.filter(id => /util|helper|json|typing|logging|wrapper|datastruct/.test(id.toLowerCase())).slice(0, 7);
+                return Array.from(new Set([...entries, ...core, ...utils])).slice(0, 16);
+            }
+            return [];
+        }
+
+        function handleRuleBasedQuery(type) {
+            if (!repoData) return;
+
+            const matches = getRuleMatches(type);
+            const matchedSet = new Set(matches);
+            const isFlow = type === 'api-flow';
+            clearGraphSelection(true);
+
+            document.querySelectorAll('.example-pill').forEach(btn => {
+                btn.classList.toggle('active-example', btn.dataset.query === type);
+            });
+
+            const nodeEls = matches.map(findNodeEl).filter(Boolean);
+            nodeEls.forEach(node => node.classList.add(isFlow ? 'flow-highlight' : 'query-highlight'));
+
+            let highlightedEdges = 0;
+            document.querySelectorAll('.edge').forEach(edge => {
+                const source = edge.getAttribute('data-source');
+                const target = edge.getAttribute('data-target');
+                if (matchedSet.has(source) && matchedSet.has(target)) {
+                    edge.classList.add('query-edge');
+                    highlightedEdges += 1;
+                }
+            });
+
+            document.querySelectorAll('.file-item').forEach(item => {
+                item.classList.toggle('active-file', matchedSet.has(item.getAttribute('data-id')));
+            });
+
+            fitNodesToViewport(nodeEls);
+            showRuleBasedAnswer(type, matches, highlightedEdges);
+        }
+
+        function showRuleBasedAnswer(type, matches, highlightedEdges) {
+            const labels = {
+                auth: 'Where is authentication handled?',
+                'api-flow': 'Show API flow',
+                entry: 'What is the entry point?',
+                routes: 'Find all routes'
+            };
+            const answerText = buildRuleAnswer(type, matches, highlightedEdges);
+
+            document.getElementById('panel-empty-state').classList.add('hidden');
+            document.getElementById('panel-content-state').classList.remove('hidden');
+            document.getElementById('panel-type').innerText = 'GRAPH ANSWER';
+            document.getElementById('panel-filename').innerText = labels[type] || 'Graph query';
+            document.getElementById('panel-filepath').innerText = `${matches.length} matching file${matches.length === 1 ? '' : 's'} highlighted`;
+            document.getElementById('panel-summary').innerText = answerText;
+            document.getElementById('dep-count').innerText = matches.length;
+            document.getElementById('panel-deps').innerHTML = matches.slice(0, 12).map(name => `<span class="dep-tag">${name}</span>`).join('');
+            document.getElementById('used-count').innerText = highlightedEdges;
+            document.getElementById('panel-used').innerHTML = highlightedEdges
+                ? '<span class="dep-tag">Highlighted graph connections</span>'
+                : '<span class="dep-tag">No direct matching edges</span>';
+            const importance = Math.min(100, Math.max(10, matches.length * 8));
+            document.getElementById('panel-importance-fill').style.width = importance + '%';
+            document.getElementById('panel-importance-text').innerText = importance;
+        }
+
+        function buildRuleAnswer(type, matches, highlightedEdges) {
+            if (type === 'auth') {
+                return matches.length
+                    ? `Possible authentication/security files are highlighted. I matched file paths containing auth, login, security, password, session, or token. Top matches: ${matches.slice(0, 5).join(', ')}.`
+                    : 'No obvious authentication files were found by name. Try checking session, config, or request-handling files.';
+            }
+            if (type === 'entry') {
+                return matches.length
+                    ? `Likely entry point files are highlighted. I looked for app.py, main.py, server.py, manage.py, wsgi.py, asgi.py, and common index files. Top matches: ${matches.slice(0, 5).join(', ')}.`
+                    : 'No standard entry point file name was found. The first onboarding files may still be the best starting point.';
+            }
+            if (type === 'routes') {
+                return matches.length
+                    ? `Routing/view files are highlighted. I matched paths containing route, view, controller, blueprint, or url. Top matches: ${matches.slice(0, 6).join(', ')}.`
+                    : 'No obvious route/view/controller files were found by name.';
+            }
+            if (type === 'api-flow') {
+                return matches.length
+                    ? `A rule-based API flow is highlighted from likely entry files through core request/app modules toward utility/helper files. ${highlightedEdges} matching connection${highlightedEdges === 1 ? '' : 's'} were found inside that flow.`
+                    : 'No API flow could be inferred from file names in this graph.';
+            }
+            return 'No rule-based answer is available for this query.';
+        }
+
+        function fitNodesToViewport(nodeEls) {
+            if (!nodeEls.length) return;
+
+            const xs = nodeEls.map(node => parseFloat(node.style.left) || 0);
+            const ys = nodeEls.map(node => parseFloat(node.style.top) || 0);
+            const minX = Math.min(...xs);
+            const minY = Math.min(...ys);
+            const maxX = Math.max(...xs) + latestGraphMetrics.nodeWidth;
+            const maxY = Math.max(...ys) + latestGraphMetrics.nodeHeight;
+            const bboxW = Math.max(1, maxX - minX);
+            const bboxH = Math.max(1, maxY - minY);
+            const padding = 120;
+            const vw = graphViewport.clientWidth;
+            const vh = graphViewport.clientHeight;
+            const nextZoom = Math.min(vw / (bboxW + padding), vh / (bboxH + padding), 1.4);
+
+            applyZoom(nextZoom);
+            const visibleW = vw / currentZoom;
+            const visibleH = vh / currentZoom;
+            graphViewport.scrollLeft = Math.max(0, minX - (visibleW - bboxW) / 2);
+            graphViewport.scrollTop = Math.max(0, minY - (visibleH - bboxH) / 2);
         }
 
         document.getElementById('close-panel-btn').onclick = () => {
@@ -633,12 +1052,99 @@
         let currentZoom = 1;
         const graphRoot2   = document.getElementById('graph-root');
         const graphViewport = document.getElementById('graph-viewport');
+        const mapArea = document.querySelector('.map-area');
+        const dashboardLayout = document.querySelector('.dashboard-layout');
+        const sidebar = document.getElementById('left-sidebar');
+        const detailsPanel = document.getElementById('details-panel');
+        const leftResizer = document.querySelector('.left-resizer');
+        const rightResizer = document.querySelector('.right-resizer');
 
         function applyZoom(zoom) {
             currentZoom = Math.max(0.3, Math.min(zoom, 2.5));
             graphRoot2.style.transform = `scale(${currentZoom})`;
             graphRoot2.style.transformOrigin = 'top left';
         }
+
+        function clamp(value, min, max) {
+            return Math.max(min, Math.min(value, max));
+        }
+
+        function setSidebarWidth(width) {
+            const nextWidth = clamp(width, 68, 560);
+            sidebar.classList.remove('collapsed');
+            sidebar.style.width = `${nextWidth}px`;
+            sidebar.style.flexBasis = `${nextWidth}px`;
+        }
+
+        function setDetailsWidth(width) {
+            const nextWidth = clamp(width, 180, 620);
+            dashboardLayout.classList.remove('right-collapsed');
+            dashboardLayout.style.setProperty('--details-width', `${nextWidth}px`);
+        }
+
+        let activeResizer = null;
+
+        function startResize(side) {
+            activeResizer = side;
+            dashboardLayout.classList.add('is-resizing');
+            document.querySelector(`.${side}-resizer`)?.classList.add('active');
+        }
+
+        function stopResize() {
+            if (!activeResizer) return;
+            document.querySelector(`.${activeResizer}-resizer`)?.classList.remove('active');
+            activeResizer = null;
+            dashboardLayout.classList.remove('is-resizing');
+        }
+
+        leftResizer.addEventListener('mousedown', () => startResize('left'));
+        rightResizer.addEventListener('mousedown', () => startResize('right'));
+
+        document.addEventListener('mousemove', (event) => {
+            if (activeResizer === 'left') {
+                setSidebarWidth(event.clientX);
+            }
+            if (activeResizer === 'right') {
+                setDetailsWidth(window.innerWidth - event.clientX);
+            }
+        });
+
+        document.addEventListener('mouseup', stopResize);
+        window.addEventListener('blur', stopResize);
+
+        document.getElementById('sidebar-toggle-btn').addEventListener('click', () => {
+            const collapsed = sidebar.classList.toggle('collapsed');
+            const button = document.getElementById('sidebar-toggle-btn');
+            if (collapsed) {
+                sidebar.style.width = '';
+                sidebar.style.flexBasis = '';
+            }
+            button.title = collapsed ? 'Expand sidebar' : 'Collapse sidebar';
+            button.setAttribute('aria-label', button.title);
+        });
+
+        document.getElementById('right-panel-toggle').addEventListener('click', () => {
+            const collapsed = dashboardLayout.classList.toggle('right-collapsed');
+            const button = document.getElementById('right-panel-toggle');
+            button.title = collapsed ? 'Expand details panel' : 'Collapse details panel';
+            button.setAttribute('aria-label', button.title);
+        });
+
+        document.getElementById('fullscreen-graph-btn').addEventListener('click', async () => {
+            if (!document.fullscreenElement) {
+                await mapArea.requestFullscreen();
+            } else {
+                await document.exitFullscreen();
+            }
+        });
+
+        document.addEventListener('fullscreenchange', () => {
+            const icon = document.querySelector('#fullscreen-graph-btn i');
+            if (!icon) return;
+            icon.className = document.fullscreenElement
+                ? 'fa-solid fa-down-left-and-up-right-to-center'
+                : 'fa-solid fa-up-right-and-down-left-from-center';
+        });
 
         document.getElementById('zoom-in-btn').addEventListener('click', () => applyZoom(currentZoom + 0.15));
         document.getElementById('zoom-out-btn').addEventListener('click', () => applyZoom(currentZoom - 0.15));
