@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CodeAtlas - History</title>
+    <meta name="description" content="View your previously analyzed repositories and re-open their architecture maps.">
     <link rel="stylesheet" href="style.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -37,34 +38,147 @@
             
             <div class="history-controls">
                 <div class="history-search">
-                    <input type="text" placeholder="Search history..." class="history-search-input">
+                    <input id="history-search-input" type="text" placeholder="Search history..." class="history-search-input">
                 </div>
-                <button class="btn-analyze-new">Analyze new repo <i class="fa-solid fa-arrow-right"></i></button>
-                <button class="btn-clear"><i class="fa-regular fa-trash-can"></i> Clear all</button>
+                <button id="btn-analyze-new" class="btn-analyze-new">Analyze new repo <i class="fa-solid fa-arrow-right"></i></button>
+                <button id="btn-clear-all" class="btn-clear">
+                    <i class="fa-regular fa-trash-can"></i> Clear all
+                </button>
             </div>
         </div>
 
-        <div class="history-list">
-            <div class="history-item">
-                <div class="history-icon">
-                    <i class="fa-solid fa-code-branch"></i>
-                </div>
-                <div class="history-details">
-                    <div class="history-repo-name">Krishna-1416/Ignition-Hackverse-DecodeX-</div>
-                    <div class="history-meta">
-                        <i class="fa-regular fa-clock"></i> 23 minutes ago &nbsp;&nbsp; github.com/Krishna-1416/Ignition-Hackverse-DecodeX-
-                    </div>
-                </div>
-                <div class="history-actions">
-                    <button class="btn-reopen">Re-open <i class="fa-solid fa-arrow-right"></i></button>
-                    <button class="btn-delete"><i class="fa-regular fa-trash-can"></i></button>
-                </div>
-            </div>
+        <div id="history-list" class="history-list">
+            <!-- Dynamically populated -->
+        </div>
+
+        <div id="empty-history" style="display: none; text-align: center; padding: 4rem 2rem; color: #94a3b8;">
+            <i class="fa-regular fa-folder-open" style="font-size: 3rem; margin-bottom: 1rem; opacity: 0.5;"></i>
+            <h3 style="color: #f8fafc; margin-bottom: 0.5rem;">No analyses yet</h3>
+            <p>Analyze a GitHub repository to see it appear here.</p>
+            <a href="index.html" class="btn-analyze" style="text-decoration: none; display: inline-flex; margin-top: 1.5rem;">
+                Get started <i class="fa-solid fa-arrow-right" style="margin-left: 0.5rem;"></i>
+            </a>
         </div>
         
         <div class="footer">
             <p>&copy; 2026 CodeAtlas — Built for developers.</p>
         </div>
     </main>
+
+    <script>
+        function getHistory() {
+            return JSON.parse(localStorage.getItem('codeatlas_history') || '[]');
+        }
+
+        function saveHistory(history) {
+            localStorage.setItem('codeatlas_history', JSON.stringify(history));
+        }
+
+        function timeAgo(dateString) {
+            const now = new Date();
+            const then = new Date(dateString);
+            const diffMs = now - then;
+            const seconds = Math.floor(diffMs / 1000);
+            const minutes = Math.floor(seconds / 60);
+            const hours = Math.floor(minutes / 60);
+            const days = Math.floor(hours / 24);
+
+            if (seconds < 60) return 'just now';
+            if (minutes < 60) return `${minutes} minute${minutes !== 1 ? 's' : ''} ago`;
+            if (hours < 24) return `${hours} hour${hours !== 1 ? 's' : ''} ago`;
+            if (days < 30) return `${days} day${days !== 1 ? 's' : ''} ago`;
+            return then.toLocaleDateString();
+        }
+
+        function renderHistory(filter = '') {
+            const historyList = document.getElementById('history-list');
+            const emptyState = document.getElementById('empty-history');
+            let history = getHistory();
+
+            if (filter) {
+                history = history.filter(item =>
+                    item.name.toLowerCase().includes(filter.toLowerCase()) ||
+                    item.url.toLowerCase().includes(filter.toLowerCase())
+                );
+            }
+
+            if (history.length === 0) {
+                historyList.style.display = 'none';
+                emptyState.style.display = filter ? 'none' : 'block';
+                if (filter) {
+                    historyList.style.display = 'flex';
+                    historyList.innerHTML = `
+                        <div style="text-align:center;padding:2rem;color:#94a3b8;">
+                            <p>No results for "${filter}"</p>
+                        </div>`;
+                }
+                return;
+            }
+
+            emptyState.style.display = 'none';
+            historyList.style.display = 'flex';
+            historyList.innerHTML = '';
+
+            history.forEach((item, index) => {
+                const div = document.createElement('div');
+                div.className = 'history-item';
+                div.innerHTML = `
+                    <div class="history-icon">
+                        <i class="fa-solid fa-code-branch"></i>
+                    </div>
+                    <div class="history-details">
+                        <div class="history-repo-name">${item.name}</div>
+                        <div class="history-meta">
+                            <i class="fa-regular fa-clock"></i>&nbsp; ${timeAgo(item.timestamp)} &nbsp;&nbsp; ${item.url.replace('https://', '')}
+                        </div>
+                    </div>
+                    <div class="history-actions">
+                        <button class="btn-reopen" data-url="${item.url}">Re-open <i class="fa-solid fa-arrow-right"></i></button>
+                        <button class="btn-delete" data-index="${index}" title="Remove from history"><i class="fa-regular fa-trash-can"></i></button>
+                    </div>
+                `;
+                historyList.appendChild(div);
+            });
+
+            // Re-open buttons
+            document.querySelectorAll('.btn-reopen').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    window.location.href = 'dashboard.html?repo=' + encodeURIComponent(btn.getAttribute('data-url'));
+                });
+            });
+
+            // Delete buttons
+            document.querySelectorAll('.btn-delete').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const idx = parseInt(btn.getAttribute('data-index'));
+                    const history = getHistory();
+                    history.splice(idx, 1);
+                    saveHistory(history);
+                    renderHistory(document.getElementById('history-search-input').value);
+                });
+            });
+        }
+
+        // Search
+        document.getElementById('history-search-input').addEventListener('input', (e) => {
+            renderHistory(e.target.value);
+        });
+
+        // Clear all
+        document.getElementById('btn-clear-all').addEventListener('click', () => {
+            if (confirm('Clear all analysis history?')) {
+                localStorage.removeItem('codeatlas_history');
+                renderHistory();
+            }
+        });
+
+        // Analyze new
+        document.getElementById('btn-analyze-new').addEventListener('click', () => {
+            window.location.href = 'index.html';
+        });
+
+        // Init
+        renderHistory();
+    </script>
 </body>
 </html>

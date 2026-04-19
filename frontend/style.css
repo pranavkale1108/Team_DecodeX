@@ -503,24 +503,29 @@ body {
 .file-item {
     display: flex;
     align-items: center;
-    padding: 0.6rem 0.5rem;
-    border-radius: 0.4rem;
+    padding: 0.8rem 0.75rem;
+    border-radius: 0.6rem;
     cursor: pointer;
-    transition: background 0.2s;
-    margin-bottom: 0.2rem;
+    transition: all 0.2s ease;
+    margin-bottom: 0.4rem;
+    background: rgba(15, 20, 31, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.03);
+    gap: 0.75rem;
 }
 
 .file-item:hover {
-    background: rgba(255, 255, 255, 0.03);
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.08);
+    transform: translateX(4px);
 }
 
 .file-item.active-file {
-    background: rgba(255, 255, 255, 0.03);
+    background: rgba(0, 242, 254, 0.1);
+    border-color: rgba(0, 242, 254, 0.3);
 }
 
 .file-item.active-file .file-name {
-    background-color: #0284c7;
-    color: #ffffff;
+    color: #00f2fe;
 }
 
 .file-icon {
@@ -542,24 +547,43 @@ body {
 }
 
 .file-name {
+    font-size: 0.9rem;
+    font-weight: 500;
     color: #e2e8f0;
-    font-size: 0.85rem;
-    font-family: monospace;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    display: inline-block;
-    padding: 0 0.2rem;
-    border-radius: 0.2rem;
-    margin-left: -0.2rem; /* offset padding so it aligns left */
+    flex: 1;
 }
 
 .file-path {
-    color: #475569;
+    color: #64748b;
     font-size: 0.75rem;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    font-family: 'Inter', monospace;
+    background: rgba(0, 0, 0, 0.2);
+    padding: 0.15rem 0.4rem;
+    border-radius: 0.25rem;
+}
+
+.file-github-link {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    padding: 0.3rem;
+    border-radius: 0.3rem;
+    transition: all 0.2s;
+    opacity: 0;
+}
+
+.file-item:hover .file-github-link {
+    opacity: 1;
+}
+
+.file-github-link:hover {
+    color: var(--accent-cyan);
+    background: rgba(0, 242, 254, 0.1);
 }
 
 .file-status {
@@ -706,6 +730,48 @@ body {
 .tag-auth { border-color: #e11d48; color: #fda4af; background: rgba(225, 29, 72, 0.1); }
 .tag-config { border-color: #475569; color: #cbd5e1; background: rgba(71, 85, 105, 0.1); }
 
+/* Layer filter styles */
+.layer-filter-bar {
+    position: relative;
+    z-index: 10;
+    background: #0f141f;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 1.5rem;
+    padding: 0.5rem 1rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-top: 0.75rem;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+}
+
+.layer-entry          { border-color: #fde047; color: #fde047; background: rgba(253, 224, 71, 0.1); }
+.layer-presentation   { border-color: #22d3ee; color: #22d3ee; background: rgba(34, 211, 238, 0.1); }
+.layer-business       { border-color: #a855f7; color: #a855f7; background: rgba(168, 85, 247, 0.1); }
+.layer-data           { border-color: #f43f5e; color: #f43f5e; background: rgba(244, 63, 94, 0.1); }
+.layer-infrastructure { border-color: #fb923c; color: #fb923c; background: rgba(251, 146, 60, 0.1); }
+.layer-test           { border-color: #4ade80; color: #4ade80; background: rgba(74, 222, 128, 0.1); }
+.layer-core           { border-color: #94a3b8; color: #94a3b8; background: rgba(148, 163, 184, 0.1); }
+
+/* Layer label in graph */
+.layer-label {
+    position: absolute;
+    left: 20px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    z-index: 5;
+    pointer-events: none;
+}
+
+.layer-label .layer-name {
+    background: rgba(15, 20, 31, 0.9);
+    padding: 0.3rem 0.6rem;
+    border-radius: 0.3rem;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
 .filter-none {
     color: #64748b;
     font-size: 0.7rem;
@@ -748,6 +814,12 @@ body {
     transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s, opacity 0.3s;
 }
 
+.network-node {
+    border-radius: 0.75rem;
+    width: 140px;
+    height: 45px;
+}
+
 .node:hover {
     transform: translateY(-2px);
     border-color: rgba(255,255,255,0.2);
@@ -760,14 +832,16 @@ body {
 
 .edge {
     transition: stroke 0.3s, stroke-width 0.3s;
+    opacity: 1 !important;
 }
 
 .edge.active-edge {
     stroke: var(--accent-cyan) !important;
-    stroke-width: 2.5 !important;
+    stroke-width: 4 !important;
     stroke-dasharray: 6 4;
     marker-end: url(#arrow-active);
     animation: dash-animation 1s linear infinite;
+    filter: drop-shadow(0 0 10px rgba(0, 242, 254, 0.8));
 }
 
 @keyframes dash-animation {
@@ -1036,6 +1110,28 @@ body {
     font-size: 0.8rem;
     color: #64748b;
     font-family: monospace;
+}
+
+.github-link-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #cbd5e1;
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    font-size: 0.85rem;
+    text-decoration: none;
+    margin-top: 0.75rem;
+    transition: all 0.2s;
+    cursor: pointer;
+}
+
+.github-link-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.2);
+    color: #fff;
 }
 
 .ai-summary-box {
