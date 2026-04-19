@@ -1,6 +1,11 @@
+import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from backend.routes.api import router
+from fastapi.staticfiles import StaticFiles
+from dotenv import load_dotenv
+
+load_dotenv()
+import backend.routes.api as api
 
 app = FastAPI(title="CodeAtlas API", version="1.0.0", description="AI-powered Repository Architecture Navigator Backend")
 
@@ -13,11 +18,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(router, prefix="/api")
+app.include_router(api.router, prefix="/api")
 
-@app.get("/")
-def root():
-    return {"message": "Welcome to CodeAtlas API. Access /docs for Swagger UI documentation."}
+# Mount frontend directory for static UI serving at the root URL
+frontend_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'frontend')
+app.mount("/", StaticFiles(directory=frontend_dir, html=True), name="frontend")
 
 if __name__ == "__main__":
     import uvicorn

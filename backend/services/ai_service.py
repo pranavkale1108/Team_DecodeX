@@ -1,36 +1,47 @@
 import os
-import ollama
+from google import genai  # Replaced 'import openai'
 
 def generate_file_summary(file_data: dict) -> str:
     """Generate a 2-3 line summary of what the file does."""
-    prompt = f"Analyze this Python file based on its metadata:\nFile: {file_data['name']}\nImports: {', '.join(file_data['imports'])}\nClasses: {', '.join(file_data['classes'])}\nFunctions: {', '.join(file_data['functions'])}\n\nProvide a concise 2-3 line summary of its purpose or role."
+    # 1. Update the environment variable key
+    api_key = os.getenv("GEMINI_API_KEY") 
     
+    if not api_key or api_key == "your_gemini_api_key_here":
+        # Keep your existing fallback logic
+        return f"File dealing with imports: {', '.join(file_data.get('imports', []))}"
+    
+    # 2. Initialize the Gemini client
+    client = genai.Client(api_key=api_key)
+
+    prompt = f"Analyze this Python file based on its metadata..." # (Keep your existing prompt)
+
     try:
-        response = ollama.chat(
-            model='llama3:8b',
-            messages=[
-                {"role": "system", "content": "You are an expert Python developer. Be concise."},
-                {"role": "user", "content": prompt}
-            ],
-            options={'num_predict': 100, 'temperature': 0.3}
+        # 3. Call the Gemini model
+        response = client.models.generate_content(
+            model="gemini-2.5-flash", 
+            contents=prompt
         )
-        return response['message']['content'].strip()
+        
+        # 4. Return the generated text
+        return response.text
+        
     except Exception as e:
-        print(f"Error generating summary for {file_data['name']}: {e}")
-        return f"File dealing with imports: {', '.join(file_data['imports'][:3])} and containing {len(file_data['functions'])} functions."
+        return f"Error generating summary: {e}"
 
 def query_repository(query: str, repo_context: str) -> str:
-    prompt = f"You are CodeAtlas, an AI assistant for evaluating a codebase.\nContext of the repository files:\n{repo_context}\n\nUser query: {query}\nProvide a helpful, precise answer."
+    """Answer questions about the repository using AI."""
+    api_key = os.getenv("GEMINI_API_KEY")
+    if not api_key:
+        return "AI Query unavailable: API Key missing."
+    
+    client = genai.Client(api_key=api_key)
+    prompt = f"You are CodeAtlas AI. Answer the following question about the codebase provided in the context.\n\nCODEBASE CONTEXT:\n{repo_context}\n\nQUESTION: {query}"
     
     try:
-        response = ollama.chat(
-            model='llama3:8b',
-            messages=[
-                {"role": "system", "content": "You are a helpful assistant evaluating a codebase architecture. Answer in markdown if appropriate. Be concise."},
-                {"role": "user", "content": prompt}
-            ],
-            options={'temperature': 0.3}
+        response = client.models.generate_content(
+            model="gemini-2.0-flash", 
+            contents=prompt
         )
-        return response['message']['content'].strip()
+        return response.text
     except Exception as e:
-        return f"Error answering query: {str(e)}. Make sure Ollama is running with 'ollama serve' and the model is pulled with 'ollama pull llama3:8b'."
+        return f"Error querying repository: {e}"

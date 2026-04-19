@@ -625,9 +625,10 @@ body {
     min-height: 500px;
     display: flex;
     flex-direction: column;
-    align-items: center;
+    align-items: stretch; /* let children (graph-viewport) fill the width */
     border-bottom: 1px solid rgba(255, 255, 255, 0.05);
     background-color: #090c14;
+    overflow: hidden;
 }
 
 /* Dot grid background */
@@ -781,19 +782,34 @@ body {
     padding-left: 1rem;
 }
 
-/* Graph Container */
+/* Graph Viewport (scrollable area inside map-area) */
+.graph-viewport {
+    flex: 1;
+    overflow: auto;
+    position: relative;
+    cursor: grab;
+    -webkit-user-select: none;
+    user-select: none;
+}
+.graph-viewport::-webkit-scrollbar { width: 6px; height: 6px; }
+.graph-viewport::-webkit-scrollbar-track  { background: rgba(0,0,0,0.2); }
+.graph-viewport::-webkit-scrollbar-thumb  { background: rgba(255,255,255,0.1); border-radius: 4px; }
+.graph-viewport::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+
+/* Graph Container: grows dynamically via JS */
 .graph-container {
     position: relative;
-    width: 800px;
-    height: 400px;
-    margin-top: 2rem;
+    min-width: 800px;
+    min-height: 500px;
     z-index: 5;
+    transform-origin: top left; /* zoom anchors top-left */
 }
 
 .graph-lines {
     position: absolute;
     top: 0;
     left: 0;
+    pointer-events: none; /* Let clicks pass through to nodes */
     z-index: 1;
 }
 

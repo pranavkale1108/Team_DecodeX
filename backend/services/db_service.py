@@ -36,3 +36,7 @@ def get_file_info(repo_url: str, file_name: str):
 def get_onboarding_path(repo_url: str):
     repo = repositories_collection.find_one({"repo_url": repo_url}, {"_id": 0, "onboarding_path": 1})
     return repo.get("onboarding_path") if repo else None
+
+def get_all_repositories():
+    cursor = repositories_collection.find({}, {"_id": 0, "repo_url": 1, "repo_name": 1, "created_at": 1}).sort("created_at", -1)
+    return list(cursor)

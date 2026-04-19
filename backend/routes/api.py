@@ -1,5 +1,6 @@
 from fastapi import APIRouter, HTTPException, BackgroundTasks
 from pydantic import BaseModel
+import concurrent.futures
 import backend.services.db_service as db_service
 from backend.services.repo_handler import clone_repository, cleanup_repository, get_repo_name
 from backend.services.parser import scan_repository
@@ -17,7 +18,7 @@ class QueryRequest(BaseModel):
     query: str
 
 @router.post("/analyze-repo")
-async def analyze_repo(request: RepoRequest):
+def analyze_repo(request: RepoRequest):
     repo_url = request.repo_url
     
     # Check if already exists in MongoDB
@@ -37,17 +38,18 @@ async def analyze_repo(request: RepoRequest):
         graph_data, G = build_dependency_graph(parsed_files)
         
         # 4. Generate AI specific data & populate final files structure
-        final_files = []
-        for f in parsed_files:
+        def process_file(f):
             summary = generate_file_summary(f)
-            file_info = {
+            return {
                 "name": f["name"],
                 "dependencies": [v for u, v in G.edges() if u == f["name"]],
                 "used_by": [u for u, v in G.edges() if v == f["name"]],
                 "summary": summary,
                 "secrets_found": f.get("secrets_found", False)
             }
-            final_files.append(file_info)
+            
+        with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
+            final_files = list(executor.map(process_file, parsed_files))
             
         # 5. Generate onboarding path
         onboarding_path = generate_onboarding_path(parsed_files, G)
@@ -69,7 +71,10 @@ async def analyze_repo(request: RepoRequest):
         
     except Exception as e:
         if 'local_path' in locals():
-            cleanup_repository(local_path)
+            try:
+                cleanup_repository(local_path)
+            except Exception as cleanup_e:
+                print(f"Cleanup failed: {cleanup_e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/graph")
@@ -107,3 +112,8 @@ def get_onboarding(repo_url: str):
     if not path:
         raise HTTPException(status_code=404, detail="Onboarding path not found")
     return {"status": "success", "onboarding_path": path}
+
+@router.get("/history")
+def get_history():
+    repos = db_service.get_all_repositories()
+    return {"status": "success", "history": repos}
